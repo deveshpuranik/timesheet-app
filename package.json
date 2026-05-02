@@ -1,0 +1,27 @@
+{
+  "name": "timesheet-web-application",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "bcryptjs": "latest",
+    "jose": "latest",
+    "mongoose": "latest",
+    "next": "16.2.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "xlsx": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "latest",
+    "autoprefixer": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest"
+  }
+}

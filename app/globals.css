@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1d1d1d;
+  --color-secondary: #a65f44;
+  --color-background: #ffffff;
+  --color-linen: #faf9f6;
+  --color-clay: #d4a373;
+  --color-moss: #1b2623;
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-playfair);
+  --font-display: var(--font-cormorant);
+  --shadow-luxury: 0 1px 2px rgba(0,0,0,.03), 0 12px 24px rgba(0,0,0,.08), 0 24px 48px rgba(0,0,0,.10);
+}
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #faf9f6;
+  color: #1d1d1d;
+  scroll-behavior: smooth;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: #1d1d1d;
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(29, 29, 29, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(166, 95, 68, 0.35);
+  border-radius: 999px;
+}
+
+.animate-reveal {
+  animation: fadeIn 1.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-scale {
+  animation: fadeInScale 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow: 0 8px 32px rgba(31, 38, 35, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.btn-smooth {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.32s ease, color 0.32s ease;
+}
+
+.btn-smooth:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(29, 29, 29, 0.16);
+}
+
+.hover-lift {
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 60px rgba(29, 29, 29, 0.14);
+}
+
+.text-shadow-lg {
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.premium-gradient {
+  background: linear-gradient(135deg, rgba(166, 95, 68, 0.1) 0%, rgba(29, 29, 29, 0.04) 100%);
+}
+
+.line-reveal {
+  position: relative;
+}
+
+.line-reveal::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 18%;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.45;
+  transition: width 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.line-reveal:hover::after {
+  width: 64%;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
