@@ -20,8 +20,8 @@ function AuthShell({ title, subtitle, children }) {
         alt="Mruda Eco Village"
         className="absolute inset-0 h-full w-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/40 to-secondary/20" />
-      <BrandCard className="relative w-full max-w-md animate-scale p-8 sm:p-10">
+      <div className="absolute inset-0 bg-black/50" />
+      <BrandCard className="relative w-full max-w-md animate-scale p-8 sm:p-10 bg-white/90 backdrop-blur-md shadow-xl rounded-2xl">
         <img
           src="/logo.png"
           alt="Mruda Eco Village logo"

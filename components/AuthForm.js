@@ -7,7 +7,7 @@ import BrandButton from "@/components/ui/BrandButton";
 import FormField from "@/components/ui/FormField";
 
 const inputClass =
-  "w-full border-b border-primary/10 bg-transparent px-0 py-4 text-sm text-primary outline-none transition focus:border-secondary";
+  "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
 
 export default function AuthForm({ mode }) {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function AuthForm({ mode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   function updateField(name, value) {
     setError("");
@@ -105,6 +106,17 @@ export default function AuthForm({ mode }) {
           type="password"
         />
       </FormField>
+      
+      const [showPassword, setShowPassword] = useState(false);
+
+      <input
+        type={showPassword ? "text" : "password"}
+        className="..."
+      />
+
+      <button onClick={() => setShowPassword(!showPassword)}>
+        {showPassword ? "Hide" : "Show"}
+      </button>
 
       {error ? (
         <p className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-800">
