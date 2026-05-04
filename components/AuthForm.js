@@ -23,7 +23,6 @@ export default function AuthForm({ mode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
   function updateField(name, value) {
     setError("");
@@ -106,17 +105,6 @@ export default function AuthForm({ mode }) {
           type="password"
         />
       </FormField>
-      
-      const [showPassword, setShowPassword] = useState(false);
-
-      <input
-        type={showPassword ? "text" : "password"}
-        className="..."
-      />
-
-      <button onClick={() => setShowPassword(!showPassword)}>
-        {showPassword ? "Hide" : "Show"}
-      </button>
 
       {error ? (
         <p className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-800">
