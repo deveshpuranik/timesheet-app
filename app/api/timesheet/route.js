@@ -1,4 +1,3 @@
-// app/api/timesheet/route.js
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { getCurrentUser } from "@/lib/auth";
@@ -15,71 +14,54 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { entries } = body;
+    const { department, date, fromTime, toTime, workType, workDetails } = body;
 
-    if (!Array.isArray(entries) || entries.length === 0) {
+    if (!department || !date || !fromTime || !toTime || !workType) {
       return NextResponse.json(
-        { message: "No entries provided." },
+        { message: "Please fill all required fields." },
         { status: 400 }
       );
     }
 
-    // Validate every entry before touching the DB
-    for (let i = 0; i < entries.length; i++) {
-      const { department, date, fromTime, toTime, workType } = entries[i];
-      const label = `Entry ${i + 1}`;
+    if (!departments.includes(department)) {
+      return NextResponse.json(
+        { message: "Please select a valid department." },
+        { status: 400 }
+      );
+    }
 
-      if (!department || !date || !fromTime || !toTime || !workType) {
-        return NextResponse.json(
-          { message: `${label}: Please fill all required fields.` },
-          { status: 400 }
-        );
-      }
+    if (!getWorkTypes(department).includes(workType)) {
+      return NextResponse.json(
+        { message: "Please select a valid work type for this department." },
+        { status: 400 }
+      );
+    }
 
-      if (!departments.includes(department)) {
-        return NextResponse.json(
-          { message: `${label}: Please select a valid department.` },
-          { status: 400 }
-        );
-      }
+    const hours = calculateHours(fromTime, toTime);
 
-      if (!getWorkTypes(department).includes(workType)) {
-        return NextResponse.json(
-          { message: `${label}: Please select a valid work type for this department.` },
-          { status: 400 }
-        );
-      }
-
-      if (calculateHours(fromTime, toTime) <= 0) {
-        return NextResponse.json(
-          { message: `${label}: "To" time must be later than "From" time.` },
-          { status: 400 }
-        );
-      }
+    if (hours <= 0) {
+      return NextResponse.json(
+        { message: "To Time must be later than From Time." },
+        { status: 400 }
+      );
     }
 
     await dbConnect();
 
-    // Build docs after all entries pass validation
-    const docs = entries.map((e) => ({
+    const entry = await Timesheet.create({
       userId: currentUser._id,
       name: currentUser.name,
-      department: e.department,
-      date: e.date,
-      fromTime: e.fromTime,
-      toTime: e.toTime,
-      hours: calculateHours(e.fromTime, e.toTime),
-      workType: e.workType,
-      workDetails: e.workDetails || ""
-    }));
-
-    const saved = await Timesheet.insertMany(docs);
+      department,
+      date,
+      fromTime,
+      toTime,
+      hours,
+      workType,
+      workDetails: workDetails || ""
+    });
 
     return NextResponse.json(
-      {
-        message: `${saved.length} timesheet ${saved.length === 1 ? "entry" : "entries"} saved successfully.`,
-        entries: saved
-      },
+      { message: "Timesheet saved successfully.", entry },
       { status: 201 }
     );
   } catch (error) {
