@@ -21,7 +21,7 @@ const UserSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "employee"],
+      enum: ["admin", "supervisor", "employee"], // ✅ added supervisor
       default: "employee"
     },
     status: {
@@ -31,9 +31,7 @@ const UserSchema = new mongoose.Schema(
       index: true
     }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
 export default mongoose.models.User || mongoose.model("User", UserSchema);

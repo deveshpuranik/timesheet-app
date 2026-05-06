@@ -44,6 +44,16 @@ const TimesheetSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: ""
+    },
+    remark: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    remarkBy: {
+      type: String,  // stores "Supervisor · John" or "Admin · Sarah"
+      trim: true,
+      default: ""
     }
   },
   {

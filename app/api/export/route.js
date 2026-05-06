@@ -22,10 +22,11 @@ export async function GET(request) {
 
     if (currentUser.role === "employee") {
       query.userId = currentUser._id;
-    }
-
-    if (currentUser.role === "admin" && userId) {
-      query.userId = userId;
+    } else if (currentUser.role === "supervisor") {
+      const employeeIds = await User.find({ role: "employee" }).select("_id").lean();
+      query.userId = userId ? userId : { $in: employeeIds.map((u) => u._id) };
+    } else if (currentUser.role === "admin") {
+      if (userId) query.userId = userId;
     }
 
     const entries = await Timesheet.find(query)
@@ -41,22 +42,20 @@ export async function GET(request) {
       "To Time": entry.toTime,
       Hours: entry.hours,
       "Work Type": entry.workType,
-      "Work Details": entry.workDetails || ""
+      "Work Details": entry.workDetails || "",
+      Remark: entry.remark || ""
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Timesheet");
 
-    const buffer = XLSX.write(workbook, {
-      type: "buffer",
-      bookType: "xlsx"
-    });
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        "Content-Disposition": "attachment; filename=\"timesheet.xlsx\"",
+        "Content-Disposition": 'attachment; filename="timesheet.xlsx"',
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Cache-Control": "no-store"
       }
