@@ -9,6 +9,8 @@ import FormField from "@/components/ui/FormField";
 const inputClass =
   "w-full border-b border-primary/10 bg-transparent px-0 py-4 text-sm text-primary outline-none transition focus:border-secondary";
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function createEmptyEntry(department) {
   return {
     id: crypto.randomUUID(),
@@ -19,7 +21,171 @@ function createEmptyEntry(department) {
   };
 }
 
-// ─── Single Work Entry Row ───────────────────────────────────────────────────
+// Convert "HH:MM" 24h → { hour, minute, period }
+function parseTo12h(value) {
+  if (!value) return { hour: "12", minute: "00", period: "AM" };
+  const [h, m] = value.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 === 0 ? "12" : String(h % 12).padStart(2, "0");
+  return { hour, minute: String(m).padStart(2, "0"), period };
+}
+
+// Convert { hour, minute, period } → "HH:MM" 24h
+function formatTo24h({ hour, minute, period }) {
+  let h = parseInt(hour, 10);
+  if (period === "AM" && h === 12) h = 0;
+  if (period === "PM" && h !== 12) h += 12;
+  return `${String(h).padStart(2, "0")}:${minute}`;
+}
+
+const HOURS = Array.from({ length: 12 }, (_, i) =>
+  String(i + 1).padStart(2, "0")
+);
+const MINUTES = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+
+// ─── TimePicker ───────────────────────────────────────────────────────────────
+
+function TimePicker({ value, onChange, label, required }) {
+  const [open, setOpen] = useState(false);
+  const parsed = parseTo12h(value);
+  const [hour, setHour] = useState(parsed.hour);
+  const [minute, setMinute] = useState(parsed.minute);
+  const [period, setPeriod] = useState(parsed.period);
+
+  // Sync internal state when value changes externally
+  useEffect(() => {
+    const p = parseTo12h(value);
+    setHour(p.hour);
+    setMinute(p.minute);
+    setPeriod(p.period);
+  }, [value]);
+
+  function commit(h, m, per) {
+    onChange(formatTo24h({ hour: h, minute: m, period: per }));
+  }
+
+  function handleHour(h) {
+    setHour(h);
+    commit(h, minute, period);
+  }
+
+  function handleMinute(m) {
+    setMinute(m);
+    commit(hour, m, period);
+  }
+
+  function handlePeriod(per) {
+    setPeriod(per);
+    commit(hour, minute, per);
+  }
+
+  const display = value
+    ? `${hour}:${minute} ${period}`
+    : "Select time";
+
+  return (
+    <div className="relative">
+      <FormField label={label} required={required}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex w-full items-center justify-between border-b border-primary/10 py-4 text-sm text-primary transition hover:border-secondary focus:outline-none"
+        >
+          <span className={value ? "text-primary" : "text-primary/40"}>{display}</span>
+          <svg
+            className={`h-4 w-4 text-primary/40 transition-transform ${open ? "rotate-180" : ""}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </FormField>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-2 w-72 rounded-2xl border border-primary/10 bg-white shadow-xl">
+          <div className="p-4">
+
+            {/* AM / PM toggle */}
+            <div className="mb-4 flex rounded-xl border border-primary/10 p-1">
+              {["AM", "PM"].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => handlePeriod(p)}
+                  className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-[0.22em] transition ${
+                    period === p
+                      ? "bg-secondary text-white"
+                      : "text-primary/50 hover:text-primary"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            {/* Hour grid */}
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.32em] text-primary/40">
+              Hour
+            </p>
+            <div className="mb-4 grid grid-cols-6 gap-1">
+              {HOURS.map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => handleHour(h)}
+                  className={`rounded-lg py-2 text-xs font-medium transition ${
+                    hour === h
+                      ? "bg-secondary text-white"
+                      : "text-primary hover:bg-secondary/10"
+                  }`}
+                >
+                  {h}
+                </button>
+              ))}
+            </div>
+
+            {/* Minute grid */}
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.32em] text-primary/40">
+              Minute
+            </p>
+            <div className="grid grid-cols-6 gap-1">
+              {MINUTES.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => handleMinute(m)}
+                  className={`rounded-lg py-2 text-xs font-medium transition ${
+                    minute === m
+                      ? "bg-secondary text-white"
+                      : "text-primary hover:bg-secondary/10"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-primary/5 px-4 py-3">
+            <p className="text-center font-serif text-2xl font-medium text-secondary">
+              {hour}:{minute} {period}
+            </p>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-2 w-full rounded-xl bg-secondary py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-white transition hover:bg-primary"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── EntryRow ─────────────────────────────────────────────────────────────────
 
 function EntryRow({ entry, index, total, department, onUpdate, onRemove }) {
   const workTypes = useMemo(() => getWorkTypes(department), [department]);
@@ -58,23 +224,20 @@ function EntryRow({ entry, index, total, department, onUpdate, onRemove }) {
           </select>
         </FormField>
 
-        <div className="grid gap-8 sm:grid-cols-2">
-          <FormField label="From" required>
-            <input
-              value={entry.fromTime}
-              onChange={(e) => onUpdate(entry.id, "fromTime", e.target.value)}
-              className={inputClass}
-              type="time"
-            />
-          </FormField>
-          <FormField label="To" required>
-            <input
-              value={entry.toTime}
-              onChange={(e) => onUpdate(entry.id, "toTime", e.target.value)}
-              className={inputClass}
-              type="time"
-            />
-          </FormField>
+        {/* ── Custom AM/PM time pickers ── */}
+        <div className="grid grid-cols-2 gap-4">
+          <TimePicker
+            label="From"
+            required
+            value={entry.fromTime}
+            onChange={(val) => onUpdate(entry.id, "fromTime", val)}
+          />
+          <TimePicker
+            label="To"
+            required
+            value={entry.toTime}
+            onChange={(val) => onUpdate(entry.id, "toTime", val)}
+          />
         </div>
       </div>
 
@@ -99,7 +262,7 @@ function EntryRow({ entry, index, total, department, onUpdate, onRemove }) {
   );
 }
 
-// ─── Main Form ───────────────────────────────────────────────────────────────
+// ─── Main Form ────────────────────────────────────────────────────────────────
 
 export default function TimesheetForm() {
   const [department, setDepartment] = useState("Housekeeping");
@@ -129,7 +292,6 @@ export default function TimesheetForm() {
     loadUser();
   }, []);
 
-  // When department changes, reset all work types to the new department's first type
   function handleDepartmentChange(value) {
     setMessage("");
     setError("");
@@ -180,7 +342,6 @@ export default function TimesheetForm() {
     setMessage("");
 
     try {
-      // Attach shared department + date to every entry before sending
       const payload = entries.map((e) => ({
         department,
         date,
@@ -239,7 +400,7 @@ export default function TimesheetForm() {
           </div>
         </div>
 
-        {/* Shared fields: Department + Date */}
+        {/* Shared: Department + Date */}
         <div className="rounded-3xl border border-primary/8 bg-white/50 p-6">
           <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.35em] text-secondary">
             Day Info
