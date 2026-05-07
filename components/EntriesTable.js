@@ -13,9 +13,7 @@ export default function EntriesTable() {
   const [error, setError] = useState("");
   const [userActionId, setUserActionId] = useState("");
   const [remarks, setRemarks] = useState({});
-
-  // ── Drill-down state ─────────────────────────────────────────────────────
-  const [selectedEmployee, setSelectedEmployee] = useState(null); // { id, name, department }
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
 
   const isPrivileged = user?.role === "admin" || user?.role === "supervisor";
 
@@ -32,11 +30,17 @@ export default function EntriesTable() {
     }, {});
   }, [entries]);
 
-  // ── Group entries by employee for the summary table ──────────────────────
+  // ── Employee summary rows (excludes supervisor's own entries) ────────────
   const employeeSummaries = useMemo(() => {
     const map = {};
     entries.forEach((entry) => {
-      const id = entry.userId?._id || entry.userId || entry.name;
+      const entryUserId = entry.userId?._id || entry.userId;
+      if (
+        user?.role === "supervisor" &&
+        String(entryUserId) === String(user?.id)
+      ) return;
+
+      const id = entryUserId || entry.name;
       if (!map[id]) {
         map[id] = {
           id,
@@ -54,13 +58,22 @@ export default function EntriesTable() {
       }
     });
     return Object.values(map);
-  }, [entries]);
+  }, [entries, user]);
 
-  // ── Entries for the selected employee ────────────────────────────────────
+  // ── Supervisor's own entries only ────────────────────────────────────────
+  const supervisorOwnEntries = useMemo(() => {
+    if (user?.role !== "supervisor") return [];
+    return entries.filter((e) => {
+      const entryUserId = e.userId?._id || e.userId;
+      return String(entryUserId) === String(user?.id);
+    });
+  }, [entries, user]);
+
+  // ── Drill-down entries for selected employee ─────────────────────────────
   const selectedEntries = useMemo(() => {
     if (!selectedEmployee) return [];
     return entries.filter((e) => {
-      const id = e.userId?._id || e.userId || e.name;
+      const id = e.userId?._id || e.userId;
       return String(id) === String(selectedEmployee.id);
     });
   }, [entries, selectedEmployee]);
@@ -101,7 +114,7 @@ export default function EntriesTable() {
         if (!response.ok) throw new Error(data.message || "Unable to load timesheets.");
 
         setEntries(data.entries || []);
-        setSelectedEmployee(null); // reset drill-down on filter change
+        setSelectedEmployee(null);
 
         const initial = {};
         (data.entries || []).forEach((e) => {
@@ -160,7 +173,6 @@ export default function EntriesTable() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
-
       setRemarks((prev) => ({
         ...prev,
         [entryId]: { ...prev[entryId], saving: false, saved: true }
@@ -272,6 +284,42 @@ export default function EntriesTable() {
         </Panel>
       ) : null}
 
+      {/* ── Supervisor: My Own Entries panel ── */}
+      {user?.role === "supervisor" && supervisorOwnEntries.length > 0 && (
+        <Panel eyebrow="My Log" title="My Timesheet Entries">
+          <TableShell>
+            <thead className="text-left text-[10px] font-bold uppercase tracking-[0.28em] text-primary/45">
+              <tr>
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Department</th>
+                <th className="px-6 py-4">Work Type</th>
+                <th className="px-6 py-4">From</th>
+                <th className="px-6 py-4">To</th>
+                <th className="px-6 py-4">Hours</th>
+                <th className="px-6 py-4">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-primary/5">
+              {supervisorOwnEntries.map((entry) => (
+                <tr key={entry._id} className="align-top transition hover:bg-secondary/5">
+                  <td className="px-6 py-5 text-primary/62">{formatDateForDisplay(entry.date)}</td>
+                  <td className="px-6 py-5 text-primary/62">{entry.department}</td>
+                  <td className="px-6 py-5 text-primary/62">{entry.workType}</td>
+                  <td className="px-6 py-5 text-primary/62">{entry.fromTime}</td>
+                  <td className="px-6 py-5 text-primary/62">{entry.toTime}</td>
+                  <td className="px-6 py-5 font-semibold text-primary">
+                    {Number(entry.hours).toFixed(2)}
+                  </td>
+                  <td className="max-w-sm px-6 py-5 text-primary/62">
+                    {entry.workDetails || "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </TableShell>
+        </Panel>
+      )}
+
       {/* ── Main timesheet panel ── */}
       <Panel
         eyebrow={
@@ -280,7 +328,6 @@ export default function EntriesTable() {
           : "Personal log"
         }
         title={
-          // When drilled in, show employee name in the title
           selectedEmployee
             ? selectedEmployee.name
             : user?.role === "admin" ? "Timesheet Dashboard"
@@ -295,7 +342,6 @@ export default function EntriesTable() {
             : "Review your submitted timesheet entries and feedback from your manager."
         }
         action={
-          // Back button when drilled in; filter dropdown when at summary level
           selectedEmployee ? (
             <button
               type="button"
@@ -339,7 +385,7 @@ export default function EntriesTable() {
                 <th className="px-6 py-4">To</th>
                 <th className="px-6 py-4">Hours</th>
                 <th className="px-6 py-4">Details</th>
-                <th className="px-6 py-4">{isPrivileged ? "Remark" : "Feedback"}</th>
+                <th className="px-6 py-4">Remark</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/5">
@@ -357,36 +403,25 @@ export default function EntriesTable() {
                     {entry.workDetails || "-"}
                   </td>
                   <td className="px-6 py-5">
-                    {isPrivileged ? (
-                      <div className="flex min-w-52 flex-col gap-2">
-                        <textarea
-                          value={remarks[entry._id]?.text ?? entry.remark ?? ""}
-                          onChange={(e) => handleRemarkChange(entry._id, e.target.value)}
-                          placeholder="Write a remark..."
-                          rows={2}
-                          className="w-full resize-y rounded-xl border border-primary/10 bg-white/70 px-3 py-2 text-sm font-light leading-6 text-primary outline-none transition focus:border-secondary focus:bg-white"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => saveRemark(entry._id)}
-                          disabled={remarks[entry._id]?.saving}
-                          className="self-end rounded-full bg-secondary px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:bg-primary/20"
-                        >
-                          {remarks[entry._id]?.saving ? "Saving..."
-                            : remarks[entry._id]?.saved ? "Saved ✓"
-                            : "Save"}
-                        </button>
-                      </div>
-                    ) : entry.remark ? (
-                      <div className="min-w-40 rounded-xl border border-secondary/20 bg-secondary/8 px-4 py-3">
-                        <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.28em] text-secondary">
-                          {entry.remarkBy || "Manager Feedback"}
-                        </p>
-                        <p className="text-sm font-light leading-6 text-primary">{entry.remark}</p>
-                      </div>
-                    ) : (
-                      <span className="text-primary/35">—</span>
-                    )}
+                    <div className="flex min-w-52 flex-col gap-2">
+                      <textarea
+                        value={remarks[entry._id]?.text ?? entry.remark ?? ""}
+                        onChange={(e) => handleRemarkChange(entry._id, e.target.value)}
+                        placeholder="Write a remark..."
+                        rows={2}
+                        className="w-full resize-y rounded-xl border border-primary/10 bg-white/70 px-3 py-2 text-sm font-light leading-6 text-primary outline-none transition focus:border-secondary focus:bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => saveRemark(entry._id)}
+                        disabled={remarks[entry._id]?.saving}
+                        className="self-end rounded-full bg-secondary px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:bg-primary/20"
+                      >
+                        {remarks[entry._id]?.saving ? "Saving..."
+                          : remarks[entry._id]?.saved ? "Saved ✓"
+                          : "Save"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
