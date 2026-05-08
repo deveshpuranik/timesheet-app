@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatDateForDisplay } from "@/lib/timesheet";
 import BrandCard from "@/components/ui/BrandCard";
+import { fetchJson } from "@/lib/fetchJson";
 
 export default function EntriesTable() {
   const [user, setUser] = useState(null);
@@ -30,7 +31,6 @@ export default function EntriesTable() {
     }, {});
   }, [entries]);
 
-  // ── Employee summary rows (excludes supervisor's own entries) ────────────
   const employeeSummaries = useMemo(() => {
     const map = {};
     entries.forEach((entry) => {
@@ -60,7 +60,6 @@ export default function EntriesTable() {
     return Object.values(map);
   }, [entries, user]);
 
-  // ── Supervisor's own entries only ────────────────────────────────────────
   const supervisorOwnEntries = useMemo(() => {
     if (user?.role !== "supervisor") return [];
     return entries.filter((e) => {
@@ -69,7 +68,6 @@ export default function EntriesTable() {
     });
   }, [entries, user]);
 
-  // ── Drill-down entries for selected employee ─────────────────────────────
   const selectedEntries = useMemo(() => {
     if (!selectedEmployee) return [];
     return entries.filter((e) => {
@@ -78,20 +76,17 @@ export default function EntriesTable() {
     });
   }, [entries, selectedEmployee]);
 
+  // ── Load dashboard (user + users list) ───────────────────────────────────
   useEffect(() => {
     async function loadDashboard() {
       setLoading(true);
       try {
-        const meResponse = await fetch("/api/auth/me", { cache: "no-store" });
-        const meData = await meResponse.json();
-        if (!meResponse.ok) throw new Error(meData.message || "Please login again.");
+        const meData = await fetchJson("/api/auth/me", { cache: "no-store" });
         setUser(meData.user);
 
         const role = meData.user.role;
         if (role === "admin" || role === "supervisor") {
-          const usersResponse = await fetch("/api/admin/users", { cache: "no-store" });
-          const usersData = await usersResponse.json();
-          if (!usersResponse.ok) throw new Error(usersData.message || "Unable to load employees.");
+          const usersData = await fetchJson("/api/admin/users", { cache: "no-store" });
           setUsers(usersData.users || []);
         }
       } catch (loadError) {
@@ -103,15 +98,14 @@ export default function EntriesTable() {
     loadDashboard();
   }, []);
 
+  // ── Load entries (re-runs when user or filter changes) ───────────────────
   useEffect(() => {
     async function loadEntries() {
       try {
         setLoading(true);
         setError("");
         const query = selectedUserId ? `?userId=${selectedUserId}` : "";
-        const response = await fetch(`/api/timesheet${query}`, { cache: "no-store" });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Unable to load timesheets.");
+        const data = await fetchJson(`/api/timesheet${query}`, { cache: "no-store" });
 
         setEntries(data.entries || []);
         setSelectedEmployee(null);
@@ -130,17 +124,16 @@ export default function EntriesTable() {
     if (user) loadEntries();
   }, [selectedUserId, user]);
 
+  // ── Update user status ────────────────────────────────────────────────────
   async function updateUserStatus(userId, status) {
     try {
       setUserActionId(`${userId}-${status}`);
       setError("");
-      const response = await fetch(`/api/admin/users/${userId}`, {
+      const data = await fetchJson(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Unable to update user status.");
       setUsers((current) =>
         current.map((emp) =>
           emp.id === userId ? { ...emp, status: data.user.status } : emp
@@ -153,6 +146,7 @@ export default function EntriesTable() {
     }
   }
 
+  // ── Remark handlers ───────────────────────────────────────────────────────
   function handleRemarkChange(entryId, value) {
     setRemarks((prev) => ({
       ...prev,
@@ -166,13 +160,11 @@ export default function EntriesTable() {
       [entryId]: { ...prev[entryId], saving: true, saved: false }
     }));
     try {
-      const response = await fetch(`/api/timesheet/${entryId}`, {
+      const data = await fetchJson(`/api/timesheet/${entryId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ remark: remarks[entryId]?.text || "" })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
       setRemarks((prev) => ({
         ...prev,
         [entryId]: { ...prev[entryId], saving: false, saved: true }
@@ -284,7 +276,7 @@ export default function EntriesTable() {
         </Panel>
       ) : null}
 
-      {/* ── Supervisor: My Own Entries panel ── */}
+      {/* Supervisor: own entries */}
       {user?.role === "supervisor" && supervisorOwnEntries.length > 0 && (
         <Panel eyebrow="My Log" title="My Timesheet Entries">
           <TableShell>
@@ -320,7 +312,7 @@ export default function EntriesTable() {
         </Panel>
       )}
 
-      {/* ── Main timesheet panel ── */}
+      {/* Main timesheet panel */}
       <Panel
         eyebrow={
           user?.role === "admin" ? "Operations"
@@ -374,7 +366,7 @@ export default function EntriesTable() {
         ) : entries.length === 0 ? (
           <p className="py-8 text-sm text-primary/55">No timesheet entries found.</p>
         ) : selectedEmployee ? (
-          // ── Drill-down: full entries for one employee ──
+          // Drill-down: full entries for one employee
           <TableShell>
             <thead className="text-left text-[10px] font-bold uppercase tracking-[0.28em] text-primary/45">
               <tr>
@@ -428,7 +420,7 @@ export default function EntriesTable() {
             </tbody>
           </TableShell>
         ) : isPrivileged ? (
-          // ── Summary table: one row per employee ──
+          // Summary table: one row per employee
           <TableShell>
             <thead className="text-left text-[10px] font-bold uppercase tracking-[0.28em] text-primary/45">
               <tr>
@@ -466,7 +458,7 @@ export default function EntriesTable() {
             </tbody>
           </TableShell>
         ) : (
-          // ── Employee: their own full entries ──
+          // Employee: their own full entries
           <TableShell>
             <thead className="text-left text-[10px] font-bold uppercase tracking-[0.28em] text-primary/45">
               <tr>
