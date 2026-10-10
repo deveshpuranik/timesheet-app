@@ -1,6 +1,8 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import SessionProvider from "@/components/SessionProvider";
+import NatureAir from "@/components/nature/NatureAir";
+import NatureFooter from "@/components/nature/NatureFooter";
 import { Cormorant_Garamond, Inter, Playfair_Display } from "next/font/google";
 
 const inter = Inter({
@@ -37,6 +39,8 @@ export default function RootLayout({ children }) {
         <SessionProvider>
           <Navbar />
           <main>{children}</main>
+          <NatureAir />
+          <NatureFooter />
         </SessionProvider>
       </body>
     </html>
