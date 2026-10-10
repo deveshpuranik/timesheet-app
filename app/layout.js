@@ -1,5 +1,6 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import SessionProvider from "@/components/SessionProvider";
 import { Cormorant_Garamond, Inter, Playfair_Display } from "next/font/google";
 
 const inter = Inter({
@@ -23,7 +24,7 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata = {
   title: "Mruda Eco Village | Hotel Management",
-  description: "timesheet management for Mruda Eco Village",
+  description: "Timesheets, leave and staff hours for Mruda Eco Village",
   icons: {
     icon: "/icon.svg"
   }
@@ -33,8 +34,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${cormorant.variable}`}>
       <body>
-        <Navbar />
-        <main>{children}</main>
+        <SessionProvider>
+          <Navbar />
+          <main>{children}</main>
+        </SessionProvider>
       </body>
     </html>
   );

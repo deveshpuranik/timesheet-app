@@ -21,8 +21,14 @@ const UserSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "supervisor", "employee"], // ✅ added supervisor
+      enum: ["admin", "supervisor", "employee"],
       default: "employee"
+    },
+    // Validated against lib/timesheet.js in the API so the list lives in one place.
+    department: {
+      type: String,
+      trim: true,
+      default: ""
     },
     status: {
       type: String,

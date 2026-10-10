@@ -1,147 +1,72 @@
-# Mruda Eco Village Hotel Management
+# Mruda Eco Village – Timesheets and Leave
 
-A production-ready role-based hotel timesheet application for Mruda Eco Village, built with Next.js App Router, MongoDB, mongoose, Tailwind CSS, JWT authentication, HTTP-only cookies, admin approval for employee registration, and Excel export using `xlsx`.
+Internal staff site for Mruda Eco Village: daily timesheets, leave requests with approval,
+team hours for admins and supervisors, and Excel export.
 
-## Folder Structure
+Built with Next.js (App Router), MongoDB (mongoose), Tailwind CSS and JWT login in an
+HTTP-only cookie. Hosted on Vercel.
 
-```txt
-.
-├── app
-│   ├── api
-│   │   ├── admin
-│   │   │   └── users
-│   │   │       ├── [id]
-│   │   │       │   └── route.js
-│   │   │       └── route.js
-│   │   ├── auth
-│   │   │   ├── login
-│   │   │   │   └── route.js
-│   │   │   ├── logout
-│   │   │   │   └── route.js
-│   │   │   ├── me
-│   │   │   │   └── route.js
-│   │   │   └── register
-│   │   │       └── route.js
-│   │   ├── export
-│   │   │   └── route.js
-│   │   ├── timesheet
-│   │   │   └── route.js
-│   │   └── users
-│   │       └── route.js
-│   ├── dashboard
-│   │   └── page.js
-│   ├── export
-│   │   └── page.js
-│   ├── login
-│   │   └── page.js
-│   ├── register
-│   │   └── page.js
-│   ├── timesheet
-│   │   └── page.js
-│   ├── globals.css
-│   ├── layout.js
-│   └── page.js
-├── components
-│   ├── AuthForm.js
-│   ├── EntriesTable.js
-│   ├── Navbar.js
-│   └── TimesheetForm.js
-├── lib
-│   ├── auth.js
-│   ├── dbConnect.js
-│   └── timesheet.js
-├── models
-│   ├── User.js
-│   └── Timesheet.js
-├── proxy.js
-├── public
-│   └── logo.png
-├── .env.example
-├── .gitignore
-├── jsconfig.json
-├── next.config.mjs
-├── package.json
-├── postcss.config.js
-├── tailwind.config.js
-└── README.md
-```
+## What each role can do
 
-## Setup
+| | Employee | Supervisor | Admin |
+|---|---|---|---|
+| Fill in own timesheet, request leave | yes | yes | yes |
+| See hours and entries | own | own + employees | everyone |
+| Leave remarks on entries | – | employees | everyone |
+| Approve / reject leave | – | employees | everyone |
+| Export to Excel | own | own + employees | everyone |
+| Approve signups, set department / role, reset passwords | – | – | yes |
 
-Do not run `npm audit fix --force` on this project. It can downgrade Next.js to an old version that does not support the App Router.
+- New signups choose a department and **cannot log in until an admin approves them** (People page).
+- A person's department is fixed; only an admin can change it. The timesheet form shows
+  only that department's work types.
+- Admins and supervisors get a bell notification for new signups and leave requests;
+  staff get one when their account or leave is approved/rejected or a remark is left.
 
-1. Install dependencies:
+## Where to change common things
+
+| To change… | Edit |
+|---|---|
+| Departments, work types, leave types | `lib/timesheet.js` |
+| Who can see whose timesheets | `lib/scope.js` |
+| Login / approval rules | `lib/auth.js`, `app/api/auth/*` |
+| Excel layout | `app/api/export/route.js` |
+| Colours and fonts | `app/globals.css` |
+
+If a department is ever renamed again, add the old name to `legacyDepartmentNames` in
+`lib/timesheet.js`; existing records are then updated automatically (`lib/dataUpgrades.js`).
+
+## Rules the site enforces
+
+- Timesheet dates cannot be in the future (India time).
+- The To time must be later than the From time, and one person's entries on a day cannot overlap.
+- People can delete their own entries for 7 days; after that only an admin can.
+- Leave requests cannot overlap an existing pending or approved request.
+
+## Run on your computer
 
 ```bash
 npm install
-```
-
-2. Create a local environment file:
-
-```bash
-cp .env.example .env.local
-```
-
-3. Add your MongoDB connection string to `.env.local`:
-
-```env
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/timesheet_app?retryWrites=true&w=majority
-JWT_SECRET=replace-with-a-long-random-secret
-```
-
-4. Run locally:
-
-```bash
 npm run dev
 ```
 
-5. Open:
+Create `.env.local` (see `.env.example`):
 
-```txt
-http://localhost:3000
+```
+MONGODB_URI=your MongoDB connection string
+JWT_SECRET=a long random secret
 ```
 
-## Pages
+Open http://localhost:3000.
 
-- `/` - Home page
-- `/timesheet` - Protected timesheet form with logged-in employee auto-filled
-- `/dashboard` - Protected employee/admin dashboard
-- `/export` - Protected Excel export download page
-- `/login` - JWT login
-- `/register` - Account registration
+## Publish
 
-## API Routes
+The site is deployed by Vercel from the `main` branch of the GitHub repository. Pushing a
+different branch creates a preview address in Vercel that you can test first.
+`MONGODB_URI` and `JWT_SECRET` must be set in the Vercel project's Environment Variables.
 
-- `POST /api/auth/register` - Create pending employee user with hashed password
-- `POST /api/auth/login` - Login only approved users and set HTTP-only JWT cookie
-- `GET /api/auth/me` - Return current logged-in user
-- `POST /api/auth/logout` - Clear auth cookie
-- `GET /api/admin/users` - Admin-only list of all users and statuses
-- `PATCH /api/admin/users/:id` - Admin-only approve/reject user
-- `POST /api/timesheet` - Save a timesheet entry for the logged-in user
-- `GET /api/timesheet` - Employee gets own entries; admin gets all or filtered entries
-- `GET /api/export` - Download authorized entries as `timesheet.xlsx`
-- `GET /api/users` - Admin-only employee list for filtering
-- `POST /api/users` - Admin-only user creation
+## First admin
 
-## Registration Approval
-
-- New public registrations are always created as `employee` with `status: pending`.
-- Pending and rejected users cannot login.
-- Admins approve or reject users from the dashboard approval panel.
-- Existing legacy admin users without a status are automatically marked approved on first login.
-
-## Deploy on Vercel
-
-1. Push this project to GitHub.
-2. Import the repository in Vercel.
-3. Add this environment variable in Vercel Project Settings:
-
-```env
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_long_random_production_secret
-```
-
-4. Deploy.
-
-Vercel will run `npm install` and `npm run build` automatically.
+Public signup always creates an employee waiting for approval. The first admin is made by
+setting `role: "admin"` on that user in MongoDB; after that, admins manage roles from the
+People page.

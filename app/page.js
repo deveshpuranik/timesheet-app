@@ -2,16 +2,16 @@ import Link from "next/link";
 
 const pillars = [
   {
-    title: "Daily stewardship",
-    body: "Capture thoughtful work logs across housekeeping, operations, HR, finance, and IT without clutter."
+    title: "Daily timesheets",
+    body: "Each person logs the day's work for their own department, with start and end times that add up by themselves."
   },
   {
-    title: "Approved access",
-    body: "Employees enter only after admin approval, keeping internal resort operations private and trusted."
+    title: "Leave requests",
+    body: "Staff request leave online. Admins and supervisors approve or reject it, and everyone sees the status."
   },
   {
-    title: "Quiet reporting",
-    body: "Admins review hours, staff activity, and Excel exports through a calm, resort-grade interface."
+    title: "Clear reporting",
+    body: "Hours per person, per day and per department, with Excel export for any person and any dates."
   }
 ];
 
@@ -36,7 +36,7 @@ export default function HomePage() {
               Work in rhythm with nature.
             </h1>
             <p className="mt-8 max-w-2xl text-base font-light leading-8 text-white/82 sm:text-lg">
-              A premium role-based timesheet system for Mruda Eco Village, shaped with the same calm, organic experience as the resort itself.
+              Timesheets, leave and staff hours for the Mruda Eco Village team, in one place.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link
@@ -66,14 +66,12 @@ export default function HomePage() {
           </h2>
         </div>
         <div className="grid gap-5 sm:grid-cols-3">
-          {pillars.map((pillar, index) => (
+          {pillars.map((pillar) => (
             <article
               key={pillar.title}
-              className="hover-lift rounded-[1.5rem] border border-primary/5 bg-white p-7 shadow-luxury"
-              style={{ animationDelay: `${index * 120}ms` }}
+              className="rounded-2xl border border-primary/10 bg-white p-7"
             >
-              <span className="font-serif text-4xl text-secondary">0{index + 1}</span>
-              <h3 className="mt-8 font-serif text-2xl font-medium text-primary">{pillar.title}</h3>
+              <h3 className="font-serif text-2xl font-medium text-primary">{pillar.title}</h3>
               <p className="mt-4 text-sm font-light leading-7 text-primary/62">{pillar.body}</p>
             </article>
           ))}
@@ -91,7 +89,7 @@ export default function HomePage() {
                 Minimal tools for mindful operations.
               </h2>
               <p className="mt-6 max-w-2xl text-sm font-light leading-8 text-white/68">
-                The interface keeps the work practical while preserving the resort language: quiet surfaces, earthy accents, open spacing, and deliberate motion.
+                New here? Create an account and choose your department. You can log in as soon as the admin approves it.
               </p>
             </div>
             <div className="min-h-80 bg-[linear-gradient(135deg,rgba(166,95,68,.9),rgba(212,163,115,.45)),url('/hero-mruda.jpeg')] bg-cover bg-center" />
