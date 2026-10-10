@@ -13,11 +13,13 @@ const TimesheetSchema = new mongoose.Schema(
       required: [true, "Employee name is required"],
       trim: true
     },
+    // Validated against lib/timesheet.js in the API so the list lives in one place.
     department: {
       type: String,
       required: [true, "Department is required"],
-      enum: ["Housekeeping", "HR", "IT", "Finance", "Operations"]
+      trim: true
     },
+    // Midnight UTC of the calendar day worked.
     date: {
       type: Date,
       required: [true, "Date is required"]
@@ -51,7 +53,7 @@ const TimesheetSchema = new mongoose.Schema(
       default: ""
     },
     remarkBy: {
-      type: String,  // stores "Supervisor · John" or "Admin · Sarah"
+      type: String, // "Supervisor · John" or "Admin · Sarah"
       trim: true,
       default: ""
     }
@@ -60,6 +62,9 @@ const TimesheetSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+TimesheetSchema.index({ userId: 1, date: -1 });
+TimesheetSchema.index({ date: -1 });
 
 export default mongoose.models.Timesheet ||
   mongoose.model("Timesheet", TimesheetSchema);

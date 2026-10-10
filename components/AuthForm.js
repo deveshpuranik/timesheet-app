@@ -3,23 +3,25 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import BrandButton from "@/components/ui/BrandButton";
-import FormField from "@/components/ui/FormField";
+import { useSession } from "@/components/SessionProvider";
+import { Button, Field, Notice, inputClass } from "@/components/ui/kit";
+import { postJson } from "@/lib/fetchJson";
+import { departments } from "@/lib/timesheet";
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary";
+const emptyForm = { name: "", email: "", password: "", department: "" };
+
+// Only ever send people to a page on this site after login.
+function safeNextPath(value) {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
+}
 
 export default function AuthForm({ mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") || "/dashboard";
+  const { refresh } = useSession();
   const isRegister = mode === "register";
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "employee"
-  });
+  const [form, setForm] = useState(emptyForm);
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -36,99 +38,104 @@ export default function AuthForm({ mode }) {
     setError("");
 
     try {
-      const payload = isRegister
-        ? form
-        : {
-            email: form.email,
-            password: form.password
-          };
-
-      const response = await fetch(`/api/auth/${isRegister ? "register" : "login"}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Authentication failed.");
-      }
-
       if (isRegister) {
-        setSuccess(data.message || "Your account is pending admin approval");
-        setForm({ name: "", email: "", password: "", role: "employee" });
+        const data = await postJson("/api/auth/register", form);
+        setSuccess(data.message);
+        setForm(emptyForm);
         return;
       }
 
-      router.push(nextPath);
+      await postJson("/api/auth/login", { email: form.email, password: form.password });
+      await refresh();
+      router.push(safeNextPath(searchParams.get("next")));
       router.refresh();
     } catch (authError) {
-      setError(authError.message || "Authentication failed.");
+      setError(authError.message);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-7">
+    <form onSubmit={handleSubmit} className="grid gap-4" noValidate>
       {isRegister ? (
-        <FormField label="Full Name">
-          <input
-            value={form.name}
-            onChange={(event) => updateField("name", event.target.value)}
-            className={inputClass}
-            placeholder="Enter your name"
-            type="text"
-          />
-        </FormField>
+        <>
+          <Field label="Full name" required>
+            <input
+              value={form.name}
+              onChange={(event) => updateField("name", event.target.value)}
+              className={inputClass}
+              placeholder="Your name"
+              type="text"
+              autoComplete="name"
+              required
+            />
+          </Field>
+
+          <Field label="Department" required hint="Only the admin can change this later.">
+            <select
+              value={form.department}
+              onChange={(event) => updateField("department", event.target.value)}
+              className={inputClass}
+              required
+            >
+              <option value="">Select your department</option>
+              {departments.map((department) => (
+                <option key={department} value={department}>
+                  {department}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </>
       ) : null}
 
-      <FormField label="Email">
+      <Field label="Email" required>
         <input
           value={form.email}
           onChange={(event) => updateField("email", event.target.value)}
           className={inputClass}
-          placeholder="you@mrudaecovillage.com"
+          placeholder="you@example.com"
           type="email"
+          autoComplete="email"
+          required
         />
-      </FormField>
+      </Field>
 
-      <FormField label="Password">
-        <input
-          value={form.password}
-          onChange={(event) => updateField("password", event.target.value)}
-          className={inputClass}
-          placeholder="Minimum 6 characters"
-          type="password"
-        />
-      </FormField>
+      <Field label="Password" required hint={isRegister ? "At least 6 characters." : undefined}>
+        <div className="relative">
+          <input
+            value={form.password}
+            onChange={(event) => updateField("password", event.target.value)}
+            className={`${inputClass} pr-16`}
+            type={showPassword ? "text" : "password"}
+            autoComplete={isRegister ? "new-password" : "current-password"}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((current) => !current)}
+            className="absolute inset-y-0 right-2 my-auto h-7 rounded px-2 text-xs font-medium text-primary/55 hover:text-primary"
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </div>
+      </Field>
 
-      {error ? (
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-800">
-          {error}
-        </p>
-      ) : null}
+      <Notice tone="error">{error}</Notice>
+      <Notice tone="success">{success}</Notice>
 
-      {success ? (
-        <p className="rounded-2xl border border-secondary/30 bg-secondary/10 px-5 py-4 text-sm font-semibold text-primary">
-          {success}
-        </p>
-      ) : null}
+      <Button disabled={loading} type="submit" size="lg" className="mt-1 w-full">
+        {loading ? "Please wait…" : isRegister ? "Create account" : "Log in"}
+      </Button>
 
-      <BrandButton disabled={loading} type="submit" className="w-full">
-        {loading ? "Please wait" : isRegister ? "Create Account" : "Login"}
-      </BrandButton>
-
-      <p className="text-center text-sm font-light text-primary/58">
-        {isRegister ? "Already registered?" : "Need an account?"}{" "}
+      <p className="text-center text-sm text-primary/60">
+        {isRegister ? "Already registered?" : "New here?"}{" "}
         <Link
           href={isRegister ? "/login" : "/register"}
-          className="font-semibold text-secondary transition hover:text-primary"
+          className="font-semibold text-secondary hover:text-primary"
         >
-          {isRegister ? "Login" : "Register"}
+          {isRegister ? "Log in" : "Create an account"}
         </Link>
       </p>
     </form>

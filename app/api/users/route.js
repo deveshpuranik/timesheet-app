@@ -1,70 +1,56 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { publicUser, requireUser, serverError } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
-import { getCurrentUser } from "@/lib/auth";
+import { departments, roles } from "@/lib/timesheet";
 import User from "@/models/User";
 
+// Admin: everyone. Supervisor: employees only (the people they supervise).
 export async function GET() {
   try {
-    const currentUser = await getCurrentUser();
-
-    if (!currentUser) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    if (currentUser.role !== "admin") {
-      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-    }
+    const { user, response } = await requireUser({ roles: ["admin", "supervisor"] });
+    if (response) return response;
 
     await dbConnect();
-    const users = await User.find({})
-      .select("name email role status")
-      .sort({ name: 1 })
-      .lean();
 
-    return NextResponse.json(
-      {
-        users: users.map((user) => ({
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          status: user.status || "pending"
-        }))
-      },
-      { status: 200 }
-    );
+    const filter = user.role === "supervisor" ? { role: "employee" } : {};
+    const users = await User.find(filter).select("-password").sort({ name: 1 }).lean();
+
+    return NextResponse.json({ users: users.map(publicUser) }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { message: error.message || "Unable to fetch users." },
-      { status: 500 }
-    );
+    return serverError(error, "Unable to load people.");
   }
 }
 
+// Admin adds a staff member directly; the account is approved from the start.
 export async function POST(request) {
   try {
-    const currentUser = await getCurrentUser();
+    const { response } = await requireUser({ roles: ["admin"] });
+    if (response) return response;
 
-    if (!currentUser) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const body = await request.json().catch(() => ({}));
+    const name = String(body.name || "").trim();
+    const email = String(body.email || "").toLowerCase().trim();
+    const password = String(body.password || "");
+    const role = String(body.role || "employee");
+    const department = String(body.department || "").trim();
 
-    if (currentUser.role !== "admin") {
-      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-    }
-
-    const { name, email, password, role = "employee" } = await request.json();
-
-    if (!name?.trim() || !email?.trim() || !password) {
+    if (!name || !email || !password) {
       return NextResponse.json(
         { message: "Name, email, and password are required." },
         { status: 400 }
       );
     }
 
-    if (!["admin", "employee"].includes(role)) {
-      return NextResponse.json({ message: "Invalid user role." }, { status: 400 });
+    if (!roles.includes(role)) {
+      return NextResponse.json({ message: "Please select a valid role." }, { status: 400 });
+    }
+
+    if (!departments.includes(department)) {
+      return NextResponse.json(
+        { message: "Please select a department." },
+        { status: 400 }
+      );
     }
 
     if (password.length < 6) {
@@ -76,41 +62,27 @@ export async function POST(request) {
 
     await dbConnect();
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const existingUser = await User.findOne({ email: normalizedEmail }).lean();
-
-    if (existingUser) {
+    if (await User.findOne({ email }).lean()) {
       return NextResponse.json(
         { message: "An account with this email already exists." },
         { status: 409 }
       );
     }
 
-    const user = await User.create({
-      name: name.trim(),
-      email: normalizedEmail,
+    const created = await User.create({
+      name,
+      email,
       password: await bcrypt.hash(password, 12),
       role,
+      department,
       status: "approved"
     });
 
     return NextResponse.json(
-      {
-        message: "User created successfully.",
-        user: {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          status: user.status
-        }
-      },
+      { message: `${created.name} has been added.`, user: publicUser(created) },
       { status: 201 }
     );
   } catch (error) {
-    return NextResponse.json(
-      { message: error.message || "Unable to create user." },
-      { status: 500 }
-    );
+    return serverError(error, "Unable to add this person.");
   }
 }

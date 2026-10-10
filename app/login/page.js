@@ -1,38 +1,15 @@
-import AuthForm from "@/components/AuthForm";
-import BrandCard from "@/components/ui/BrandCard";
 import { Suspense } from "react";
+import AuthForm from "@/components/AuthForm";
+import AuthShell from "@/components/AuthShell";
+
+export const metadata = { title: "Log in | Mruda Eco Village" };
 
 export default function LoginPage() {
   return (
-    <AuthShell title="Welcome Back" subtitle="Login to manage Mruda Eco Village timesheets.">
-      <Suspense fallback={<p className="text-sm text-primary/55">Loading login...</p>}>
+    <AuthShell title="Welcome back" subtitle="Log in to fill in your timesheet and request leave.">
+      <Suspense fallback={<p className="text-center text-sm text-primary/55">Loading…</p>}>
         <AuthForm mode="login" />
       </Suspense>
     </AuthShell>
-  );
-}
-
-function AuthShell({ title, subtitle, children }) {
-  return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-linen px-6 py-32">
-      <img
-        src="/hero-mruda.jpeg"
-        alt="Mruda Eco Village"
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-      <div className="absolute inset-0 bg-black/50" />
-      <BrandCard className="relative w-full max-w-md animate-scale p-8 sm:p-10 bg-white/90 backdrop-blur-md shadow-xl rounded-2xl">
-        <img
-          src="/logo.png"
-          alt="Mruda Eco Village logo"
-          className="mx-auto mb-7 h-20 w-20 rounded-full bg-white object-contain p-2 shadow-sm"
-        />
-        <h1 className="text-center font-serif text-4xl font-medium text-primary">{title}</h1>
-        <p className="mb-8 mt-3 text-center text-sm font-light leading-7 text-primary/58">
-          {subtitle}
-        </p>
-        {children}
-      </BrandCard>
-    </section>
   );
 }
